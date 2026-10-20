@@ -214,3 +214,10 @@ def test_stdout_lines_are_ascii(helper):
     raw = out.getvalue()
     assert raw.isascii()
     assert json.loads(raw) == {"type": "utterance", "text": "não está"}
+
+
+def test_spoken_failed_is_written_to_stdout(helper):
+    port, out, _ = helper
+    event = {"type": "spoken", "id": "a", "outcome": "failed"}
+    assert call(port, "POST", "/event", event)[0] == 204
+    assert out.events() == [event]

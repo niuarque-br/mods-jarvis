@@ -208,7 +208,7 @@ def make_server(
             elif kind == "spoken":
                 spoken_id = str(data.get("id") or "")
                 outcome = data.get("outcome")
-                if not spoken_id or outcome not in ("done", "stopped"):
+                if not spoken_id or outcome not in ("done", "stopped", "failed"):
                     raise ValueError("spoken inválido")
                 event["id"] = spoken_id
                 event["outcome"] = outcome

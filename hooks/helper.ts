@@ -9,7 +9,7 @@ export type HelperEvent =
   | { type: 'ready'; port: number }
   | { type: 'utterance'; text: string }
   | { type: 'stop' }
-  | { type: 'spoken'; id: string; outcome: 'done' | 'stopped' }
+  | { type: 'spoken'; id: string; outcome: 'done' | 'stopped' | 'failed' }
   | { type: 'closed' }
   | { type: 'error'; message: string }
   | { type: 'exit' }

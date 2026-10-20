@@ -135,7 +135,8 @@ export class Failures {
 }
 
 // Decide quais ids de blocos falados se resolvem e como.
-// pending: ids (string|null) ainda não resolvidos. event: {type:'done', id} ou {type:'stop'}.
+// pending: ids (string|null) ainda não resolvidos. event: {type:'done', id}, {type:'stop'} (pare/flush)
+// ou {type:'fail'} (a página não está ativa para falar: o viewer cai para a legenda, R23).
 export function settle(pending, event) {
   if (event.type === "done") {
     const at = event.id ? pending.indexOf(event.id) : -1;
@@ -145,8 +146,9 @@ export function settle(pending, event) {
       pending: pending.filter((_, i) => i !== at),
     };
   }
+  const outcome = event.type === "fail" ? "failed" : "stopped";
   return {
-    spoken: pending.filter(Boolean).map((id) => ({ type: "spoken", id, outcome: "stopped" })),
+    spoken: pending.filter(Boolean).map((id) => ({ type: "spoken", id, outcome })),
     pending: [],
   };
 }

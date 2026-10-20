@@ -32,6 +32,8 @@ export class Conversation {
     this.turnId = turnId
     this.stopped = false
     this.afterScene = false
+    // A summary held from an earlier turn stays in the chat only; it is not spoken mid this one.
+    this.held = []
     this.lastSpokeAt = now
     this.lastWaitAt = Number.NEGATIVE_INFINITY
   }

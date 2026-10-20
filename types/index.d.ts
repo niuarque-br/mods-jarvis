@@ -1,6 +1,7 @@
 export type Mode = 'off' | 'starting' | 'on'
 export type Phase = 'listening' | 'thinking' | 'speaking' | 'error'
-export type Said = { id: string; outcome: 'done' | 'stopped' } | null
+// failed (R23): on, but could not speak (still opening, or its voice page inactive); the viewer falls back.
+export type Said = { id: string; outcome: 'done' | 'stopped' | 'failed' } | null
 
 declare module 'claude-code' {
   interface PluginState {

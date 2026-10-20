@@ -86,3 +86,8 @@ test('tool acknowledgements', async () => {
   expect(toolAck('mcp__ahgora-ponto__carregar_batidas')).toBe('Vou consultar ahgora-ponto.')
   expect(toolAck('TodoWrite')).toBe('Um momento.')
 })
+
+test('toolAck do viewer: Vou desenhar.', () => {
+  expect(toolAck('mcp__jarvis-viewer__mostrar_cena')).toBe('Vou desenhar.')
+  expect(toolAck('mcp__jarvis-viewer__outra')).toBe('Vou consultar jarvis-viewer.')
+})

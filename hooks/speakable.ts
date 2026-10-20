@@ -222,10 +222,13 @@ const TOOL_ACKS: Record<string, string> = {
   WebFetch: 'Vou pesquisar.',
   Agent: 'Vou delegar uma parte.',
   Task: 'Vou delegar uma parte.',
+  'mcp__jarvis-viewer__mostrar_cena': 'Vou desenhar.',
 }
 
 export function toolAck(tool: string): string {
+  const known = TOOL_ACKS[tool]
+  if (known) return known
   const mcp = /^mcp__(.+?)__/.exec(tool)
   if (mcp) return `Vou consultar ${mcp[1]}.`
-  return TOOL_ACKS[tool] ?? 'Um momento.'
+  return 'Um momento.'
 }

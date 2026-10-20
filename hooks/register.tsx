@@ -67,7 +67,9 @@ async function onSceneSay($: EngineInterface, value: unknown) {
   if (typeof say.id !== 'string' || typeof say.text !== 'string' || say.id === lastSayId) return
   const id = say.id
   lastSayId = id
-  if (!live || !handle || sceneStopped) return answerLater($, { id, outcome: 'stopped' })
+  if (!handle || sceneStopped) return answerLater($, { id, outcome: 'stopped' })
+  // Still opening (or its voice page not ready): on, but it cannot speak — the viewer falls back (R23).
+  if (!live) return answerLater($, { id, outcome: 'failed' })
   sceneSays.set(id, 'queued')
   conversation.spoke(await $.clock.now())
   // Queued on the page after whatever it is saying; the page answers with `spoken`.
@@ -93,7 +95,7 @@ async function onScenePlaying($: EngineInterface, value: unknown) {
   if (held.length) await speak($, held)
 }
 
-function onSpoken($: EngineInterface, id: string, outcome: 'done' | 'stopped') {
+function onSpoken($: EngineInterface, id: string, outcome: Said['outcome']) {
   if (!sceneSays.delete(id)) return
   void writeSaid($, { id, outcome })
 }
@@ -169,7 +171,8 @@ async function onStop($: EngineInterface) {
 }
 
 async function onTick($: EngineInterface) {
-  if (live && conversation.shouldWarn(await $.clock.now())) await speak($, [WAIT_PHRASE])
+  // A scene narrated by the Jarvis is the answer in progress: no "still on it" over it.
+  if (live && !scenePlaying && conversation.shouldWarn(await $.clock.now())) await speak($, [WAIT_PHRASE])
 }
 
 async function onHelperEvent($: EngineInterface, mine: number, event: HelperEvent) {
@@ -325,7 +328,7 @@ export const register: Register = (on, loaded: PluginOptions) => {
 
   on('tool.call', async ($, e, next) => {
     if (e.agentId === undefined && e.tool === SCENE_TOOL) conversation.afterScene = true
-    if (live && e.agentId === undefined && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool)])
+    if (live && e.agentId === undefined && !scenePlaying && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool)])
     return next(e)
   }).catch(($, e, next) => next(e))
 

@@ -587,7 +587,7 @@ function reportSettled(item, event) {
 
 function stopPlayback() {
   const dropped = voice.replyQueue.splice(0);
-  dropped.forEach((item) => reportSettled(item, { type: "stop" }));
+  dropped.forEach((item) => reportSettled(item, { type: voice.active ? "stop" : "fail" }));
   skipCurrent();
 }
 
@@ -694,7 +694,7 @@ async function playChunks(item, id) {
 
 function speak(chunks, ids) {
   if (!voice.active) {
-    settle(ids || [], { type: "stop" }).spoken.forEach(sendEvent);
+    settle(ids || [], { type: "fail" }).spoken.forEach(sendEvent);
     return;
   }
   voice.replyQueue.push(prepareChunks(chunks, ids));
@@ -709,7 +709,8 @@ async function pump() {
     while (voice.active && voice.replyQueue.length) {
       const item = voice.replyQueue.shift();
       await playItem(item, ++voice.playId);
-      reportSettled(item, { type: "stop" });
+      // a escuta foi desligada no meio: o que não foi dito falhou (não é um "pare")
+      reportSettled(item, { type: voice.active ? "stop" : "fail" });
       rememberEcho();
       voice.spoken = "";
       voice.synthetic = false;

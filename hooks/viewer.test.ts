@@ -244,3 +244,69 @@ test('sem viewer instalado nada muda', async ($, on) => {
   calls.release()
   await ran
 })
+
+test('resumo guardado de um turno não sai no meio do turno seguinte (I4)', { plugins: [viewer] }, async ($, on) => {
+  stepsBottom(on, [[sceneCall(0)], [text('Resumo antigo.')]])
+  const { clock, calls, ran } = await startOn($, on)
+  await $.turn.start({ text: 'explica', turnId: 't1' })
+  await step($, 't1', 0)
+  await viewerSets($, { playing: true })
+  await clock.settle()
+  await step($, 't1', 1)
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
+  await clock.settle()
+  expect(spoken(calls)).toEqual([])
+  // a new turn starts while the scene still plays: the old summary stays in the chat only
+  await $.turn.start({ text: 'outra coisa', turnId: 't2' })
+  await viewerSets($, { playing: false })
+  await clock.settle()
+  expect(spoken(calls)).not.toContain('Resumo antigo.')
+  calls.release()
+  await ran
+})
+
+test('com uma cena tocando não há aviso de ferramenta nem "Ainda estou nisso."', { plugins: [viewer] }, async ($, on) => {
+  stepsBottom(on, [])
+  on('tool.call', async () => ({ result: 'ok' }))
+  const { clock, calls, ran } = await startOn($, on)
+  await $.turn.start({ text: 'explica', turnId: 't1' })
+  await viewerSets($, { playing: true })
+  await clock.advance(5000)
+  await $.tool.call({ tool: 'Bash' } as never)
+  await clock.advance(13000)
+  expect(spoken(calls)).toEqual([])
+  // once the scene ends they come back
+  await viewerSets($, { playing: false })
+  await clock.advance(31000)
+  expect(spoken(calls)).toContain('Ainda estou nisso.')
+  calls.release()
+  await ran
+})
+
+test('spoken failed da página vira said failed (R23)', { plugins: [viewer] }, async ($, on) => {
+  stepsBottom(on, [])
+  const said = saids(on)
+  const { clock, calls, ran } = await startOn($, on)
+  await viewerSets($, { playing: true, say: { id: 'f1', text: 'Um.' } })
+  await clock.settle()
+  calls.emit({ type: 'spoken', id: 'f1', outcome: 'failed' })
+  await clock.settle()
+  expect(said).toEqual([{ id: 'f1', outcome: 'failed' }])
+  calls.release()
+  await ran
+})
+
+test('say com o Jarvis ainda abrindo responde failed, não stopped (R23)', { plugins: [viewer] }, async ($, on) => {
+  stepsBottom(on, [])
+  const said = saids(on)
+  const clock = mock.clock(on)
+  const calls = world(on, { chunks: [] })
+  const ran = $.command.run(RUN)
+  await clock.settle()
+  await viewerSets($, { playing: true, say: { id: 'g1', text: 'Um.' } })
+  await clock.settle()
+  expect(said).toEqual([{ id: 'g1', outcome: 'failed' }])
+  expect(speaks(calls)).toEqual([])
+  calls.release()
+  await ran
+})

@@ -151,3 +151,13 @@ test("planChunks: bloco em branco com id fica na ordem (lead/tail)", () => {
 test("planChunks: sem ids", () => {
   assert.deepEqual(planChunks(["um", ""], null), { chunks: ["um"], ids: [null], lead: [[]], tail: [] });
 });
+
+test("settle: fail (página sem voz ativa) dá failed para cada id (R23)", () => {
+  assert.deepEqual(settle(["a", null, "b"], { type: "fail" }), {
+    spoken: [
+      { type: "spoken", id: "a", outcome: "failed" },
+      { type: "spoken", id: "b", outcome: "failed" },
+    ],
+    pending: [],
+  });
+});
