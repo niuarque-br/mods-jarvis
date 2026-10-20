@@ -10,6 +10,14 @@
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-mod-D97757)
 
+## Em funcionamento
+
+<p align="center">
+  <img src="docs/orbe.gif" width="380" alt="A orbe do Modo Jarvis ouvindo e depois respondendo em voz">
+</p>
+
+<p align="center"><sub>A orbe ouvindo e depois respondendo em voz (o GIF não tem som).</sub></p>
+
 ## Recursos
 
 - **Fale em vez de digitar**: uma pausa envia o pedido; o que você fala enquanto o Claude trabalha entra na fila e vai quando ele terminar.
