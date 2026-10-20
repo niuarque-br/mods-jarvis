@@ -150,3 +150,21 @@ export function settle(pending, event) {
     pending: [],
   };
 }
+
+// Separa blocos em branco dos falaveis, sem perder a ordem dos ids.
+// lead[i]: ids de blocos em branco logo antes do bloco falavel i; tail: ids em branco depois do ultimo.
+export function planChunks(chunks, ids) {
+  const plan = { chunks: [], ids: [], lead: [], tail: [] };
+  let blanks = [];
+  chunks.forEach((c, i) => {
+    const id = (ids && ids[i]) || null;
+    if (String(c || "").trim()) {
+      plan.chunks.push(c);
+      plan.ids.push(id);
+      plan.lead.push(blanks);
+      blanks = [];
+    } else if (id) blanks.push(id);
+  });
+  plan.tail = blanks;
+  return plan;
+}

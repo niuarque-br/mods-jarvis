@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   normWords, isEcho, isStopCommand, stopInPartial, isDuplicateStop, isLateEcho,
-  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, settle,
+  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, settle, planChunks,
 } from "../voicecore.js";
 
 const q = "Posso rodar um comando: git status?";
@@ -140,4 +140,14 @@ test("settle: não mexe na lista de entrada", () => {
   const queue = ["a"];
   settle(queue, { type: "stop" });
   assert.deepEqual(queue, ["a"]);
+});
+
+test("planChunks: bloco em branco com id fica na ordem (lead/tail)", () => {
+  assert.deepEqual(planChunks(["  ", "um", "", "dois", " "], ["x", "a", "y", null, "z"]), {
+    chunks: ["um", "dois"], ids: ["a", null], lead: [["x"], ["y"]], tail: ["z"],
+  });
+});
+
+test("planChunks: sem ids", () => {
+  assert.deepEqual(planChunks(["um", ""], null), { chunks: ["um"], ids: [null], lead: [[]], tail: [] });
 });

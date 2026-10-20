@@ -1,6 +1,6 @@
 import {
   normWords, isEcho, isStopCommand, isDuplicateStop, stopInPartial, isLateEcho,
-  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, Failures, LevelWindow, settle,
+  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, Failures, LevelWindow, settle, planChunks,
 } from "/static/voicecore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -612,7 +612,7 @@ async function fetchSpeech(text) {
 function playBlob(blob) {
   const audio = voice.audio;
   return new Promise((resolve) => {
-    if (!audio) { resolve(); return; }
+    if (!audio) { resolve(false); return; }
     const url = URL.createObjectURL(blob);
     let finished = false;
     const done = () => {
@@ -621,7 +621,7 @@ function playBlob(blob) {
       audio.onended = audio.onerror = null;
       URL.revokeObjectURL(url);
       if (voice.endPlay === done) voice.endPlay = null;
-      resolve();
+      resolve(true);
     };
     voice.endPlay = done;
     audio.onended = done;
@@ -631,12 +631,17 @@ function playBlob(blob) {
   });
 }
 
-async function speakBrowser(chunks, id, item, ids) {
-  if (!window.speechSynthesis) return;
+function settleBlanks(item, blanks) {
+  blanks.forEach((blank) => reportSettled(item, { type: "done", id: blank }));
+}
+
+async function speakBrowser(chunks, id, item, offset) {
+  if (!window.speechSynthesis) return false;
   voice.synthetic = true;
   for (let n = 0; n < chunks.length; n++) {
     const chunk = chunks[n];
-    if (id !== voice.playId) return;
+    if (id !== voice.playId) return false;
+    settleBlanks(item, item.lead[offset + n]);
     setState("speaking");
     await new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(chunk);
@@ -645,48 +650,53 @@ async function speakBrowser(chunks, id, item, ids) {
       voice.endPlay = resolve;
       speechSynthesis.speak(u);
     });
-    if (id === voice.playId) reportSettled(item, { type: "done", id: ids[n] });
+    if (id !== voice.playId) return false;
+    reportSettled(item, { type: "done", id: item.ids[offset + n] });
   }
   voice.synthetic = false;
+  return true;
 }
 
 function prepareChunks(chunks, ids) {
-  const list = [], listIds = [], empty = [];
-  chunks.forEach((c, i) => {
-    const chunkId = (ids && ids[i]) || null;
-    if (String(c || "").trim()) { list.push(c); listIds.push(chunkId); }
-    else if (chunkId) empty.push(chunkId);
-  });
-  const first = list.length && !useBrowserTts() ? fetchSpeech(list[0]) : Promise.resolve(null);
-  empty.forEach((chunkId) => sendEvent({ type: "spoken", id: chunkId, outcome: "done" }));
-  return { chunks: list, ids: listIds, pending: listIds.slice(), first };
+  const plan = planChunks(chunks, ids);
+  const first = plan.chunks.length && !useBrowserTts() ? fetchSpeech(plan.chunks[0]) : Promise.resolve(null);
+  return { ...plan, pending: [...plan.ids, ...plan.tail, ...plan.lead.flat()].filter(Boolean), first };
 }
 
 async function playItem(item, id) {
+  if (id !== voice.playId) return;
+  if (!item.chunks.length) { settleBlanks(item, item.tail); return; }
+  if (await playChunks(item, id)) settleBlanks(item, item.tail);
+}
+
+async function playChunks(item, id) {
   const chunks = item.chunks;
-  if (id !== voice.playId || !chunks.length) return;
   voice.spoken = chunks.join(" ");
   if (!voice.userPartial) resetListening();
-  if (useBrowserTts()) return speakBrowser(chunks, id, item, item.ids);
+  if (useBrowserTts()) return speakBrowser(chunks, id, item, 0);
   let next = item.first.then(got => got || fetchSpeech(chunks[0]));
   for (let i = 0; i < chunks.length; i++) {
     const got = await next;
-    if (id !== voice.playId) return;
+    if (id !== voice.playId) return false;
+    settleBlanks(item, item.lead[i]);
     next = i + 1 < chunks.length ? fetchSpeech(chunks[i + 1]) : null;
     if (got.skip) { reportSettled(item, { type: "done", id: item.ids[i] }); continue; }
     if (got.error) {
       setCaption("voz indisponível; usando a do navegador", true);
-      return speakBrowser(chunks.slice(i), id, item, item.ids.slice(i));
+      return speakBrowser(chunks.slice(i), id, item, i);
     }
     setState("speaking");
-    await playBlob(got.blob);
-    if (id !== voice.playId) return;
+    if (!(await playBlob(got.blob)) || id !== voice.playId) return false;
     reportSettled(item, { type: "done", id: item.ids[i] });
   }
+  return true;
 }
 
 function speak(chunks, ids) {
-  if (!voice.active) return;
+  if (!voice.active) {
+    settle(ids || [], { type: "stop" }).spoken.forEach(sendEvent);
+    return;
+  }
   voice.replyQueue.push(prepareChunks(chunks, ids));
   pump();
 }
