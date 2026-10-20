@@ -1,5 +1,9 @@
 # 🎙 Modo Jarvis para o Claude Code
 
+<p align="center">
+  <img src="docs/orbe.png" width="380" alt="A orbe do Modo Jarvis falando, com o botão Parar e a dica de uso">
+</p>
+
 **Converse com o Claude por voz.** Você fala, o Claude recebe como se você tivesse digitado e responde em voz alta, frase a frase, enquanto escreve, com uma orbe animada numa janelinha flutuante.
 
 ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
