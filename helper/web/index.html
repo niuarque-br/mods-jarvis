@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modo Jarvis</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="stage" id="stage" data-state="off">
+    <canvas id="orb" aria-hidden="true"></canvas>
+    <div class="orb-fallback" id="orbFallback" hidden></div>
+    <div class="caption" id="caption" aria-live="polite">preparando…</div>
+    <div class="question" id="question" hidden></div>
+    <div class="actions">
+      <button type="button" id="allow" class="btn ok" hidden>Permitir</button>
+      <button type="button" id="deny" class="btn no" hidden>Negar</button>
+      <button type="button" id="stop" class="btn">Parar</button>
+    </div>
+    <div class="hint">Fale naturalmente · uma pausa envia · diga “pare” ou “chega” para cortar</div>
+  </main>
+  <script type="module" src="/static/conversa.js"></script>
+</body>
+</html>

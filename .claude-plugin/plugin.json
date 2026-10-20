@@ -1,0 +1,67 @@
+{
+  "name": "modo-conversa",
+  "version": "0.1.0",
+  "description": "Modo Jarvis por voz: fale com o Claude e ouça a resposta, com a orbe numa janelinha flutuante",
+  "author": { "name": "Niuarque Batista" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "sttProvider": {
+      "type": "string",
+      "title": "Reconhecimento de voz",
+      "description": "browser usa o Edge sem chave; openai e elevenlabs precisam de chave",
+      "default": "browser",
+      "options": ["browser", "openai", "elevenlabs"]
+    },
+    "ttsProvider": {
+      "type": "string",
+      "title": "Voz da resposta",
+      "description": "edge não precisa de chave; browser usa a voz do Windows",
+      "default": "edge",
+      "options": ["edge", "openai", "elevenlabs", "browser"]
+    },
+    "ttsVoice": {
+      "type": "string",
+      "title": "Nome da voz",
+      "description": "Edge: pt-BR-AntonioNeural; OpenAI: onyx; ElevenLabs: id da voz",
+      "default": "pt-BR-AntonioNeural"
+    },
+    "ttsRate": {
+      "type": "string",
+      "title": "Velocidade da fala",
+      "description": "Ajuste em porcentagem, como +10% ou -5%",
+      "default": "+0%"
+    },
+    "silenceMs": {
+      "type": "number",
+      "title": "Pausa que envia (ms)",
+      "description": "Silêncio que encerra a fala, de 300 a 5000",
+      "default": 1200
+    },
+    "proximity": {
+      "type": "number",
+      "title": "Filtro de voz distante",
+      "description": "0 desliga; 45 é o padrão",
+      "default": 45
+    },
+    "sttPrompt": {
+      "type": "string",
+      "title": "Glossário do reconhecimento",
+      "description": "Palavras técnicas que ajudam a transcrição (OpenAI)",
+      "default": "Claude Code, TypeScript, Python, pytest, commit, branch, pull request"
+    },
+    "openaiApiKey": {
+      "type": "string",
+      "title": "Chave da OpenAI",
+      "description": "Só para STT ou TTS da OpenAI",
+      "sensitive": true,
+      "default": ""
+    },
+    "elevenlabsApiKey": {
+      "type": "string",
+      "title": "Chave da ElevenLabs",
+      "description": "Só para STT ou TTS da ElevenLabs",
+      "sensitive": true,
+      "default": ""
+    }
+  }
+}

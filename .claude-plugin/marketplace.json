@@ -1,0 +1,6 @@
+{
+  "name": "modo-jarvis",
+  "owner": { "name": "Niuarque Batista" },
+  "description": "Modo Jarvis: converse com o Claude Code por voz",
+  "plugins": [{ "name": "modo-conversa", "source": "./" }]
+}

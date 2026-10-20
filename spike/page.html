@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Modo conversa spike</title></head>
+<body>
+<pre id="out">spike</pre>
+<script>
+let ticks = 0, frames = 0;
+setInterval(() => ticks++, 20);
+(function loop() { frames++; requestAnimationFrame(loop); })();
+function send(obj) {
+  document.getElementById("out").textContent = JSON.stringify(obj, null, 1);
+  fetch("/report", { method: "POST", body: JSON.stringify(obj) });
+}
+function voices() {
+  return speechSynthesis.getVoices().filter(v => v.lang.startsWith("pt")).map(v => v.name);
+}
+const gl = document.createElement("canvas").getContext("webgl2");
+setTimeout(() => send({
+  webkitSpeechRecognition: "webkitSpeechRecognition" in window,
+  SpeechRecognition: "SpeechRecognition" in window,
+  webgl2: !!gl,
+  rtc: typeof RTCPeerConnection === "function",
+  mediaDevices: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+  secure: window.isSecureContext,
+  voices: voices(),
+  ua: navigator.userAgent,
+}), 1500);
+setInterval(() => send({ visibility: document.visibilityState, ticks, frames }), 5000);
+</script>
+</body>
+</html>

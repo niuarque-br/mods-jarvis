@@ -1,0 +1,8 @@
+.venv-build/
+build/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude-plugin/types/
+*.log
