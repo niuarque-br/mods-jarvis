@@ -16,7 +16,7 @@ from conversa.consent import classify_consent
 from conversa.providers import ProviderError, VoiceConfig
 
 COMMANDS = {"state", "speak", "flush", "approval", "approval-done", "caption", "quit"}
-PAGE_EVENTS = {"utterance", "stop", "closed"}
+PAGE_EVENTS = {"utterance", "stop", "closed", "spoken"}
 AUDIO_TYPES = {"audio/wav", "audio/webm", "audio/ogg", "audio/mpeg"}
 MAX_BODY = 10 * 1024 * 1024
 TYPES = {".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".html": "text/html"}
@@ -205,6 +205,13 @@ def make_server(
                 if not text:
                     raise ValueError("fala vazia")
                 event["text"] = text
+            elif kind == "spoken":
+                spoken_id = str(data.get("id") or "")
+                outcome = data.get("outcome")
+                if not spoken_id or outcome not in ("done", "stopped"):
+                    raise ValueError("spoken inválido")
+                event["id"] = spoken_id
+                event["outcome"] = outcome
             self.server.emit(event)
             self._send(204)
 

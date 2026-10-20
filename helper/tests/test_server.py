@@ -106,6 +106,13 @@ def test_page_event_is_written_to_stdout(helper):
     assert out.events() == [{"type": "utterance", "text": "roda os testes"}]
 
 
+def test_spoken_page_event_is_written_to_stdout(helper):
+    port, out, _ = helper
+    event = {"type": "spoken", "id": "a", "outcome": "done"}
+    assert call(port, "POST", "/event", event)[0] == 204
+    assert out.events() == [event]
+
+
 def wait_with(port, answer_fn):
     result = {}
 

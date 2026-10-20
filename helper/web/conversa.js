@@ -1,6 +1,6 @@
 import {
   normWords, isEcho, isStopCommand, isDuplicateStop, stopInPartial, isLateEcho,
-  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, Failures, LevelWindow,
+  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, Failures, LevelWindow, settle,
 } from "/static/voicecore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -579,8 +579,15 @@ function skipCurrent() {
   voice.synthetic = false;
 }
 
+function reportSettled(item, event) {
+  const out = settle(item.pending, event);
+  item.pending = out.pending;
+  out.spoken.forEach(sendEvent);
+}
+
 function stopPlayback() {
-  voice.replyQueue.length = 0;
+  const dropped = voice.replyQueue.splice(0);
+  dropped.forEach((item) => reportSettled(item, { type: "stop" }));
   skipCurrent();
 }
 
@@ -624,10 +631,11 @@ function playBlob(blob) {
   });
 }
 
-async function speakBrowser(chunks, id) {
+async function speakBrowser(chunks, id, item, ids) {
   if (!window.speechSynthesis) return;
   voice.synthetic = true;
-  for (const chunk of chunks) {
+  for (let n = 0; n < chunks.length; n++) {
+    const chunk = chunks[n];
     if (id !== voice.playId) return;
     setState("speaking");
     await new Promise((resolve) => {
@@ -637,14 +645,21 @@ async function speakBrowser(chunks, id) {
       voice.endPlay = resolve;
       speechSynthesis.speak(u);
     });
+    if (id === voice.playId) reportSettled(item, { type: "done", id: ids[n] });
   }
   voice.synthetic = false;
 }
 
-function prepareChunks(chunks) {
-  const list = chunks.filter(c => String(c || "").trim());
+function prepareChunks(chunks, ids) {
+  const list = [], listIds = [], empty = [];
+  chunks.forEach((c, i) => {
+    const chunkId = (ids && ids[i]) || null;
+    if (String(c || "").trim()) { list.push(c); listIds.push(chunkId); }
+    else if (chunkId) empty.push(chunkId);
+  });
   const first = list.length && !useBrowserTts() ? fetchSpeech(list[0]) : Promise.resolve(null);
-  return { chunks: list, first };
+  empty.forEach((chunkId) => sendEvent({ type: "spoken", id: chunkId, outcome: "done" }));
+  return { chunks: list, ids: listIds, pending: listIds.slice(), first };
 }
 
 async function playItem(item, id) {
@@ -652,26 +667,27 @@ async function playItem(item, id) {
   if (id !== voice.playId || !chunks.length) return;
   voice.spoken = chunks.join(" ");
   if (!voice.userPartial) resetListening();
-  if (useBrowserTts()) return speakBrowser(chunks, id);
+  if (useBrowserTts()) return speakBrowser(chunks, id, item, item.ids);
   let next = item.first.then(got => got || fetchSpeech(chunks[0]));
   for (let i = 0; i < chunks.length; i++) {
     const got = await next;
     if (id !== voice.playId) return;
     next = i + 1 < chunks.length ? fetchSpeech(chunks[i + 1]) : null;
-    if (got.skip) continue;
+    if (got.skip) { reportSettled(item, { type: "done", id: item.ids[i] }); continue; }
     if (got.error) {
       setCaption("voz indisponível; usando a do navegador", true);
-      return speakBrowser(chunks.slice(i), id);
+      return speakBrowser(chunks.slice(i), id, item, item.ids.slice(i));
     }
     setState("speaking");
     await playBlob(got.blob);
     if (id !== voice.playId) return;
+    reportSettled(item, { type: "done", id: item.ids[i] });
   }
 }
 
-function speak(chunks) {
+function speak(chunks, ids) {
   if (!voice.active) return;
-  voice.replyQueue.push(prepareChunks(chunks));
+  voice.replyQueue.push(prepareChunks(chunks, ids));
   pump();
 }
 
@@ -683,6 +699,7 @@ async function pump() {
     while (voice.active && voice.replyQueue.length) {
       const item = voice.replyQueue.shift();
       await playItem(item, ++voice.playId);
+      reportSettled(item, { type: "stop" });
       rememberEcho();
       voice.spoken = "";
       voice.synthetic = false;
@@ -735,7 +752,7 @@ const handlers = {
     if (msg.state === "error") setState("error");
     else if (!voice.pumping && voice.active) setState(msg.state === "speaking" ? idleState() : msg.state);
   },
-  speak(msg) { speak(msg.chunks || []); },
+  speak(msg) { speak(msg.chunks || [], Array.isArray(msg.ids) ? msg.ids : null); },
   flush() { stopPlayback(); },
   caption(msg) { setCaption(msg.text || ""); },
   approval(msg) {

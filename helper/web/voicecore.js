@@ -133,3 +133,20 @@ export class Failures {
     this.count = 0;
   }
 }
+
+// Decide quais ids de blocos falados se resolvem e como.
+// pending: ids (string|null) ainda não resolvidos. event: {type:'done', id} ou {type:'stop'}.
+export function settle(pending, event) {
+  if (event.type === "done") {
+    const at = event.id ? pending.indexOf(event.id) : -1;
+    if (at < 0) return { spoken: [], pending: pending.slice() };
+    return {
+      spoken: [{ type: "spoken", id: event.id, outcome: "done" }],
+      pending: pending.filter((_, i) => i !== at),
+    };
+  }
+  return {
+    spoken: pending.filter(Boolean).map((id) => ({ type: "spoken", id, outcome: "stopped" })),
+    pending: [],
+  };
+}

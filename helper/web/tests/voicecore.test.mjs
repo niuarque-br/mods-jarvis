@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   normWords, isEcho, isStopCommand, stopInPartial, isDuplicateStop, isLateEcho,
-  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision,
+  medianOf, isNearVoice, learnLevel, encodeWav, approvalDecision, settle,
 } from "../voicecore.js";
 
 const q = "Posso rodar um comando: git status?";
@@ -115,4 +115,29 @@ test("LevelWindow esquece o que passou da janela", () => {
   w.add(1500, 0.1);
   assert.equal(w.peak(1500), 0.1);
   assert.equal(new LevelWindow(1000).peak(0), 0);
+});
+
+test("settle: bloco com id que acaba de tocar vira done", () => {
+  assert.deepEqual(settle(["a", null, "b"], { type: "done", id: "a" }),
+    { spoken: [{ type: "spoken", id: "a", outcome: "done" }], pending: [null, "b"] });
+});
+
+test("settle: bloco sem id não reporta nada", () => {
+  assert.deepEqual(settle([null], { type: "done", id: null }), { spoken: [], pending: [null] });
+});
+
+test("settle: flush com 2 blocos pendentes dá 2 stopped", () => {
+  assert.deepEqual(settle(["a", null, "b"], { type: "stop" }), {
+    spoken: [
+      { type: "spoken", id: "a", outcome: "stopped" },
+      { type: "spoken", id: "b", outcome: "stopped" },
+    ],
+    pending: [],
+  });
+});
+
+test("settle: não mexe na lista de entrada", () => {
+  const queue = ["a"];
+  settle(queue, { type: "stop" });
+  assert.deepEqual(queue, ["a"]);
 });
