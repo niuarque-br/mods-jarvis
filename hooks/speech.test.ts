@@ -209,6 +209,7 @@ test('the voice style section is added only while on', async ($, on) => {
   expect(during.sections).toHaveLength(1)
   expect(during.sections[0]).toMatchObject({ id: 'modo-conversa', scope: 'session' })
   expect(during.sections[0]?.text).toContain('conversando por voz')
+  expect(during.sections[0]?.text).toContain('português do Brasil o campo description')
   calls.release()
   await ran
 })

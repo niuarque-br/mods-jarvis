@@ -29,7 +29,9 @@ const WAIT_PHRASE = 'Ainda estou nisso.'
 const SCREEN_PHRASE = 'O detalhe está na tela.'
 const VOICE_STYLE =
   'O usuário está conversando por voz. Comece com uma frase curta que responda ou diga o que vai fazer. ' +
-  'Prefira frases curtas, sem tabelas, e deixe detalhes técnicos no texto depois de um resumo falado.'
+  'Prefira frases curtas, sem tabelas, e deixe detalhes técnicos no texto depois de um resumo falado. ' +
+  'Escreva sempre em português do Brasil o campo description das chamadas de Bash e PowerShell, ' +
+  'numa frase curta que diga o que o comando faz, porque ela é lida em voz alta.'
 
 let options: PluginOptions = {}
 let handle: HelperHandle | null = null
