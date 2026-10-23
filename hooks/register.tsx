@@ -328,7 +328,7 @@ export const register: Register = (on, loaded: PluginOptions) => {
 
   on('tool.call', async ($, e, next) => {
     if (e.agentId === undefined && e.tool === SCENE_TOOL) conversation.afterScene = true
-    if (live && e.agentId === undefined && !scenePlaying && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool)])
+    if (live && e.agentId === undefined && !scenePlaying && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool, (e as { description?: unknown }).description)])
     return next(e)
   }).catch(($, e, next) => next(e))
 

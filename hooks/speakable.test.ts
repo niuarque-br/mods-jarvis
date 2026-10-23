@@ -87,6 +87,14 @@ test('tool acknowledgements', async () => {
   expect(toolAck('TodoWrite')).toBe('Um momento.')
 })
 
+test('toolAck de comando inclui a descrição', () => {
+  expect(toolAck('Bash', 'Show working tree status')).toBe('Vou rodar um comando: show working tree status.')
+  expect(toolAck('PowerShell', 'Lista os arquivos.')).toBe('Vou rodar um comando: lista os arquivos.')
+  expect(toolAck('Bash', '   ')).toBe('Vou rodar um comando.')
+  expect(toolAck('Bash', 'x'.repeat(81))).toBe('Vou rodar um comando.')
+  expect(toolAck('Read', 'Lê o arquivo')).toBe('Vou olhar os arquivos.')
+})
+
 test('toolAck do viewer: Vou desenhar.', () => {
   expect(toolAck('mcp__jarvis-viewer__mostrar_cena')).toBe('Vou desenhar.')
   expect(toolAck('mcp__jarvis-viewer__outra')).toBe('Vou consultar jarvis-viewer.')

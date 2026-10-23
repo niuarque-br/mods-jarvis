@@ -225,7 +225,21 @@ const TOOL_ACKS: Record<string, string> = {
   'mcp__jarvis-viewer__mostrar_cena': 'Vou desenhar.',
 }
 
-export function toolAck(tool: string): string {
+const SHELL_TOOLS = new Set(['Bash', 'PowerShell'])
+const DESCRIPTION_LIMIT = 80
+
+function commandAck(description: unknown): string | null {
+  if (typeof description !== 'string') return null
+  const text = description.replace(/\s+/g, ' ').trim().replace(/[.!?;:,]+$/, '')
+  if (!text || text.length > DESCRIPTION_LIMIT) return null
+  return `Vou rodar um comando: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`
+}
+
+export function toolAck(tool: string, description?: unknown): string {
+  if (SHELL_TOOLS.has(tool)) {
+    const described = commandAck(description)
+    if (described) return described
+  }
   const known = TOOL_ACKS[tool]
   if (known) return known
   const mcp = /^mcp__(.+?)__/.exec(tool)
