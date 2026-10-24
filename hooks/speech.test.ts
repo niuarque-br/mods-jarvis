@@ -3,6 +3,7 @@ import type { Engine } from 'claude-code/testing'
 import type { On, TurnStepChunk } from 'claude-code'
 
 import { Conversation } from './conversation'
+import { PHRASES } from './speakable'
 import { RUN, spoken, world } from './testkit'
 import type { WorldOptions } from './testkit'
 
@@ -25,6 +26,8 @@ async function startOn($: Engine, on: On, opts: WorldOptions = {}) {
   await clock.settle()
   return { clock, calls, ran }
 }
+
+const oneOf = (kind: keyof typeof PHRASES, said: string | undefined) => (PHRASES[kind] as readonly string[]).includes(said ?? '')
 
 const text = (t: string, index = 0): TurnStepChunk => ({ kind: 'text', index, text: t })
 
@@ -110,7 +113,8 @@ test('a long reply ends with a spoken summary', async ($, on) => {
   await runTurn($, 't1', long)
   await clock.settle()
   expect(asked).toContain('Primeira frase')
-  expect(spoken(calls).at(-1)).toBe('Resumindo: Fiz três mudanças. O detalhe está na tela.')
+  const said = PHRASES.summary.flatMap(lead => PHRASES.screen.map(screen => `${lead.replace('{x}', 'Fiz três mudanças.')} ${screen}`))
+  expect(said).toContain(spoken(calls).at(-1) ?? '')
   calls.release()
   await ran
 })
@@ -121,7 +125,7 @@ test('a failed summary still points to the screen', async ($, on) => {
   const { clock, calls, ran } = await startOn($, on)
   await runTurn($, 't1', 'x')
   await clock.settle()
-  expect(spoken(calls).at(-1)).toBe('O detalhe está na tela.')
+  expect(oneOf('screen', spoken(calls).at(-1))).toBe(true)
   calls.release()
   await ran
 })
@@ -181,7 +185,8 @@ test('a failed turn says so after 2 s', async ($, on) => {
   expect(calls.cmds).toContainEqual({ type: 'state', state: 'error' })
   expect(spoken(calls)).toEqual([])
   await clock.advance(2000)
-  expect(spoken(calls)).toEqual(['Tive um problema ao processar.'])
+  expect(spoken(calls)).toHaveLength(1)
+  expect(oneOf('error', spoken(calls)[0])).toBe(true)
   calls.release()
   await ran
 })
@@ -191,7 +196,8 @@ test('long wait is spoken after 12 s of silence', async ($, on) => {
   const { clock, calls, ran } = await startOn($, on)
   await $.turn.start({ text: 'oi', turnId: 't1' })
   await clock.advance(13000)
-  expect(spoken(calls)).toEqual(['Ainda estou nisso.'])
+  expect(spoken(calls)).toHaveLength(1)
+  expect(oneOf('wait', spoken(calls)[0])).toBe(true)
   calls.release()
   await ran
 })

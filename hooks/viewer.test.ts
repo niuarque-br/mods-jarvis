@@ -2,6 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On, TurnStepChunk } from 'claude-code'
 
+import { PHRASES } from './speakable'
 import { RUN, spoken, world } from './testkit'
 import type { World } from './testkit'
 
@@ -278,7 +279,7 @@ test('com uma cena tocando não há aviso de ferramenta nem "Ainda estou nisso."
   // once the scene ends they come back
   await viewerSets($, { playing: false })
   await clock.advance(31000)
-  expect(spoken(calls)).toContain('Ainda estou nisso.')
+  expect(spoken(calls).some(said => (PHRASES.wait as readonly string[]).includes(said))).toBe(true)
   calls.release()
   await ran
 })

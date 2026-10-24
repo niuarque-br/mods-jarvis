@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { SentenceStream, chunkSentences, speakable, toolAck } from './speakable'
+import { PHRASES, SentenceStream, Variety, chunkSentences, speakable, toolAck } from './speakable'
 
 test('code block becomes a note', async () => {
   expect(speakable('```py\nx=1\n```')).toBe('Deixei um trecho de código na tela.')
@@ -98,4 +98,29 @@ test('toolAck de comando inclui a descrição', () => {
 test('toolAck do viewer: Vou desenhar.', () => {
   expect(toolAck('mcp__jarvis-viewer__mostrar_cena')).toBe('Vou desenhar.')
   expect(toolAck('mcp__jarvis-viewer__outra')).toBe('Vou consultar jarvis-viewer.')
+})
+
+test('Variety nunca repete a última frase do mesmo tipo', () => {
+  const variety = new Variety()
+  let last = ''
+  for (let i = 0; i < 50; i++) {
+    const said = variety.pick('command')
+    expect(PHRASES.command as readonly string[]).toContain(said)
+    expect(said).not.toBe(last)
+    last = said
+  }
+})
+
+test('Variety sorteia com a fonte dada e preenche {x}', () => {
+  const variety = new Variety(() => 0.99)
+  expect(variety.pick('mcp', 'ahgora-ponto')).toBe('Vou buscar em ahgora-ponto.')
+  expect(variety.pick('mcp', 'ahgora-ponto')).toBe('Consultando ahgora-ponto.')
+  expect(toolAck('Bash', 'Lista os arquivos', variety.pick)).toBe('Próximo comando: lista os arquivos.')
+})
+
+test('toda frase de aviso termina em pontuação', () => {
+  for (const phrases of Object.values(PHRASES)) for (const phrase of phrases) {
+    if (phrase.endsWith('{x}')) continue
+    expect(/[.!?]$/.test(phrase)).toBe(true)
+  }
 })

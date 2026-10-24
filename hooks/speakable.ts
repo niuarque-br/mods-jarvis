@@ -209,40 +209,82 @@ export class SentenceStream {
   }
 }
 
-const TOOL_ACKS: Record<string, string> = {
-  Bash: 'Vou rodar um comando.',
-  PowerShell: 'Vou rodar um comando.',
-  Read: 'Vou olhar os arquivos.',
-  Grep: 'Vou olhar os arquivos.',
-  Glob: 'Vou olhar os arquivos.',
-  Edit: 'Vou editar o arquivo.',
-  Write: 'Vou editar o arquivo.',
-  NotebookEdit: 'Vou editar o arquivo.',
-  WebSearch: 'Vou pesquisar.',
-  WebFetch: 'Vou pesquisar.',
-  Agent: 'Vou delegar uma parte.',
-  Task: 'Vou delegar uma parte.',
-  'mcp__jarvis-viewer__mostrar_cena': 'Vou desenhar.',
+/**
+ * The collections each spoken notice draws from, the first phrase of each the plain one.
+ * `{x}` is filled in: a command's description, an MCP server's name.
+ */
+export const PHRASES = {
+  command: ['Vou rodar um comando.', 'Rodando um comando.', 'Deixa eu rodar um comando.', 'Vou executar uma coisa aqui.'],
+  describedCommand: ['Vou rodar um comando: {x}.', 'Rodando um comando: {x}.', 'Agora um comando: {x}.', 'Próximo comando: {x}.'],
+  files: ['Vou olhar os arquivos.', 'Deixa eu dar uma olhada no código.', 'Vou ler uns arquivos.', 'Vou procurar no projeto.'],
+  edit: ['Vou editar o arquivo.', 'Vou fazer a alteração.', 'Mexendo no arquivo.', 'Vou ajustar o código.'],
+  search: ['Vou pesquisar.', 'Vou procurar na web.', 'Deixa eu pesquisar isso.'],
+  agent: ['Vou delegar uma parte.', 'Vou passar uma parte para um ajudante.', 'Vou dividir o trabalho.'],
+  scene: ['Vou desenhar.', 'Vou montar a cena.', 'Deixa eu desenhar isso.'],
+  mcp: ['Vou consultar {x}.', 'Consultando {x}.', 'Vou buscar em {x}.'],
+  other: ['Um momento.', 'Só um instante.', 'Um segundo.', 'Já volto.'],
+  wait: ['Ainda estou nisso.', 'Continuo trabalhando.', 'Sigo nisso, mais um pouco.', 'Ainda trabalhando aqui.'],
+  error: ['Tive um problema ao processar.', 'Algo deu errado aqui.', 'Não consegui terminar, tive um problema.'],
+  screen: ['O detalhe está na tela.', 'Deixei os detalhes na tela.', 'O resto está na tela.'],
+  summary: ['Resumindo: {x}', 'Em resumo: {x}', 'Em poucas palavras: {x}'],
+} as const
+
+export type PhraseKind = keyof typeof PHRASES
+export type Pick = (kind: PhraseKind, fill?: string) => string
+
+/** The plain phrase of each kind, what a caller without a `Variety` says. */
+export const plain: Pick = (kind, fill = '') => PHRASES[kind][0].replace('{x}', fill)
+
+/** Draws each notice at random from its collection, never repeating the last one said for that kind. */
+export class Variety {
+  private last = new Map<PhraseKind, number>()
+
+  constructor(private random: () => number = Math.random) {}
+
+  pick: Pick = (kind, fill = '') => {
+    const phrases = PHRASES[kind]
+    const previous = this.last.get(kind)
+    const choices = previous === undefined ? phrases.length : phrases.length - 1
+    let index = Math.min(choices - 1, Math.floor(this.random() * choices))
+    if (previous !== undefined && index >= previous) index += 1
+    this.last.set(kind, index)
+    return phrases[index]!.replace('{x}', fill)
+  }
 }
 
-const SHELL_TOOLS = new Set(['Bash', 'PowerShell'])
+const TOOL_KINDS: Record<string, PhraseKind> = {
+  Bash: 'command',
+  PowerShell: 'command',
+  Read: 'files',
+  Grep: 'files',
+  Glob: 'files',
+  Edit: 'edit',
+  Write: 'edit',
+  NotebookEdit: 'edit',
+  WebSearch: 'search',
+  WebFetch: 'search',
+  Agent: 'agent',
+  Task: 'agent',
+  'mcp__jarvis-viewer__mostrar_cena': 'scene',
+}
+
 const DESCRIPTION_LIMIT = 80
 
-function commandAck(description: unknown): string | null {
+function sayableDescription(description: unknown): string | null {
   if (typeof description !== 'string') return null
   const text = description.replace(/\s+/g, ' ').trim().replace(/[.!?;:,]+$/, '')
   if (!text || text.length > DESCRIPTION_LIMIT) return null
-  return `Vou rodar um comando: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`
+  return `${text.charAt(0).toLowerCase()}${text.slice(1)}`
 }
 
-export function toolAck(tool: string, description?: unknown): string {
-  if (SHELL_TOOLS.has(tool)) {
-    const described = commandAck(description)
-    if (described) return described
+export function toolAck(tool: string, description?: unknown, pick: Pick = plain): string {
+  const kind = TOOL_KINDS[tool]
+  if (kind === 'command') {
+    const described = sayableDescription(description)
+    return described ? pick('describedCommand', described) : pick('command')
   }
-  const known = TOOL_ACKS[tool]
-  if (known) return known
+  if (kind) return pick(kind)
   const mcp = /^mcp__(.+?)__/.exec(tool)
-  if (mcp) return `Vou consultar ${mcp[1]}.`
-  return 'Um momento.'
+  if (mcp) return pick('mcp', mcp[1])
+  return pick('other')
 }

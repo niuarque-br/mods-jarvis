@@ -6,7 +6,7 @@ import { approvalQuestion } from './approval'
 import { Conversation, shownMode } from './conversation'
 import { BASE, isBusy, startHelper } from './helper'
 import type { HelperEvent, HelperHandle } from './helper'
-import { SentenceStream, toolAck } from './speakable'
+import { SentenceStream, Variety, toolAck } from './speakable'
 
 const mode = atom({ plugin: 'modo-conversa', key: 'mode' } as const, 'off' as Mode)
 const phase = atom({ plugin: 'modo-conversa', key: 'phase' } as const, 'listening' as Phase)
@@ -24,9 +24,6 @@ const COMMANDS = ['conversa', 'jarvis'] as const
 /** The Jarvis Viewer's scene tool: the reply text after it is the scene's summary. */
 const SCENE_TOOL = 'mcp__jarvis-viewer__mostrar_cena'
 const SUMMARY_MODEL = 'claude-haiku-5-5'
-const ERROR_PHRASE = 'Tive um problema ao processar.'
-const WAIT_PHRASE = 'Ainda estou nisso.'
-const SCREEN_PHRASE = 'O detalhe está na tela.'
 const VOICE_STYLE =
   'O usuário está conversando por voz. Comece com uma frase curta que responda ou diga o que vai fazer. ' +
   'Prefira frases curtas, sem tabelas, e deixe detalhes técnicos no texto depois de um resumo falado. ' +
@@ -38,6 +35,7 @@ let handle: HelperHandle | null = null
 let generation = 0
 let live = false
 let conversation = new Conversation()
+const variety = new Variety()
 let stream: SentenceStream | null = null
 let ticker: Timer | null = null
 
@@ -174,7 +172,7 @@ async function onStop($: EngineInterface) {
 
 async function onTick($: EngineInterface) {
   // A scene narrated by the Jarvis is the answer in progress: no "still on it" over it.
-  if (live && !scenePlaying && conversation.shouldWarn(await $.clock.now())) await speak($, [WAIT_PHRASE])
+  if (live && !scenePlaying && conversation.shouldWarn(await $.clock.now())) await speak($, [variety.pick('wait')])
 }
 
 async function onHelperEvent($: EngineInterface, mine: number, event: HelperEvent) {
@@ -248,7 +246,8 @@ async function summarize($: EngineInterface, rest: string) {
     text = ''
   }
   if (mine !== generation || (conversation.turnId !== null && conversation.turnId !== ended)) return
-  await speakReply($, [text ? `Resumindo: ${text} ${SCREEN_PHRASE}` : SCREEN_PHRASE])
+  const screen = variety.pick('screen')
+  await speakReply($, [text ? `${variety.pick('summary', text)} ${screen}` : screen])
 }
 
 async function onTurnStart($: EngineInterface, turnId: string) {
@@ -267,7 +266,7 @@ async function onTurnEnd($: EngineInterface, failed: boolean, aborted: boolean) 
     await send($, { type: 'state', state: 'error' })
     await setPhase($, 'error')
     $.clock.after(2000, () => {
-      speak($, [ERROR_PHRASE]).catch(() => undefined)
+      speak($, [variety.pick('error')]).catch(() => undefined)
     })
   } else {
     await setState($, 'listening')
@@ -330,7 +329,7 @@ export const register: Register = (on, loaded: PluginOptions) => {
 
   on('tool.call', async ($, e, next) => {
     if (e.agentId === undefined && e.tool === SCENE_TOOL) conversation.afterScene = true
-    if (live && e.agentId === undefined && !scenePlaying && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool, (e as { description?: unknown }).description)])
+    if (live && e.agentId === undefined && !scenePlaying && conversation.shouldAck(await $.clock.now())) await speak($, [toolAck(e.tool, (e as { description?: unknown }).description, variety.pick)])
     return next(e)
   }).catch(($, e, next) => next(e))
 
